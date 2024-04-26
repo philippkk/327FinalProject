@@ -31,15 +31,31 @@ class Enemy{
         };
 
 };
+class Player{
+    public:
+         CircleShape shape;
+         Vector2f currVelocity;
+         float drag;
+         float maxSpd;
+         float spd;
+         Player(float radius = 5.f)
+            :currVelocity(0.0f,0.0f),maxSpd(8.f){
+                this->shape.setRadius(radius);
+                this->shape.setFillColor(Color::White);
+                this->drag = 0.75f;
+                this->spd = 1.f;
+         }
+};
 
+
+bool isPlayerMoving = false;
 int main()
 {
     srand(time(NULL));
     RenderWindow window(VideoMode(800, 600), "pew pew!");
     window.setFramerateLimit(60);
-
-    CircleShape player(25.0f);
-    player.setFillColor(Color::White);
+    
+    Player player(25.0f);
 
     Bullet b1(5);
     std::vector<Bullet> bullets;
@@ -55,6 +71,8 @@ int main()
     Vector2f aimDir;
     Vector2f aimDirNorm;
 
+
+    void handlePlayerMovement(Player *player);
     while (window.isOpen())
     {
         sf::Event event;
@@ -65,24 +83,13 @@ int main()
         }
 
         //update
-        playerCenter = Vector2f(player.getPosition().x + player.getRadius(),player.getPosition().y + player.getRadius());
+        playerCenter = Vector2f(player.shape.getPosition().x + player.shape.getRadius(),player.shape.getPosition().y + player.shape.getRadius());
         mousePosWindow = Vector2f(Mouse::getPosition(window));
         aimDir = mousePosWindow - playerCenter;
         aimDirNorm =  Vector2f(aimDir.x / sqrt(pow(aimDir.x,2) + pow(aimDir.y,2)),aimDir.y / sqrt(pow(aimDir.x,2) + pow(aimDir.y,2)));
 
-        if(Keyboard::isKeyPressed(Keyboard::W)){
-            player.move(0,-10.f);
-        }
-        if(Keyboard::isKeyPressed(Keyboard::A)){
-            player.move(-10.0f,0);
-        }
-        if(Keyboard::isKeyPressed(Keyboard::S)){
-            player.move(0,10.0f);
-        }
-        if(Keyboard::isKeyPressed(Keyboard::D)){
-            player.move(10.0f,0);
-        }
-        std::cout << player.getPosition().x << " " << player.getPosition().y << std::endl;
+        handlePlayerMovement(&player);
+        std::cout << player.shape.getPosition().x << " " << player.shape.getPosition().y << std::endl;
         if(spawnCounter < 20){
             spawnCounter++;
         }
@@ -121,7 +128,7 @@ int main()
         for(size_t i = 0; i < enemies.size();i++){
             window.draw(enemies[i].shape);
         }
-        window.draw(player);
+        window.draw(player.shape);
         for(size_t i = 0; i < bullets.size();i++){
             window.draw(bullets[i].shape);
 
@@ -134,4 +141,74 @@ int main()
     }
 
     return 0;
+}
+
+
+bool isAnyKeyPressed()
+	{
+		for (int k = -1; k < sf::Keyboard::KeyCount; ++k)
+		{
+			if (sf::Keyboard::isKeyPressed(static_cast<sf::Keyboard::Key>(k)))
+				return true;
+		}
+		return false;
+	}
+
+void handlePlayerMovement(Player *player){
+    //clamp
+    if(player->currVelocity.x > player->maxSpd){
+        player->currVelocity.x = player->maxSpd;
+    }else if(player->currVelocity.x < -player->maxSpd){
+        player->currVelocity.x = -player->maxSpd;
+    }
+    if(player->currVelocity.y > player->maxSpd){
+        player->currVelocity.y = player->maxSpd;
+    }else if(player->currVelocity.y < -player->maxSpd){
+        player->currVelocity.y = -player->maxSpd;
+    }
+    //drag
+    if(player->currVelocity.x > 0){
+        player->currVelocity.x -= player->drag;
+    }else if (player->currVelocity.x < 0 ){
+        player->currVelocity.x += player->drag;
+    }
+    if(player->currVelocity.y > 0){
+        player->currVelocity.y -= player->drag;
+    }else if (player->currVelocity.y < 0 ){
+        player->currVelocity.y += player->drag;
+    }
+    //move
+    player->shape.move(player->currVelocity);
+    //low vel check
+  
+    if(!isPlayerMoving){
+        if((player->currVelocity.x > -0.5f && player->currVelocity.x < 0) 
+        || (player->currVelocity.x < 0.5f && player->currVelocity.x > 0)) {
+            player->currVelocity.x = 0;
+        }
+        if((player->currVelocity.y > -0.5f && player->currVelocity.y < 0) 
+        || (player->currVelocity.y < 0.5f && player->currVelocity.y > 0)){
+            player->currVelocity.y = 0;
+        }
+    }
+    if(!isAnyKeyPressed()){
+        isPlayerMoving = false;
+    }
+
+        if(Keyboard::isKeyPressed(Keyboard::W)){
+            player->currVelocity.y -= 2.5;
+            isPlayerMoving = true;
+        }
+        if(Keyboard::isKeyPressed(Keyboard::A)){
+            player->currVelocity.x -= 2.5;
+            isPlayerMoving = true;
+        }
+        if(Keyboard::isKeyPressed(Keyboard::S)){
+            player->currVelocity.y += 2.5;
+            isPlayerMoving = true;
+        }
+        if(Keyboard::isKeyPressed(Keyboard::D)){
+            player->currVelocity.x += 2.5;
+            isPlayerMoving = true;
+        }
 }
