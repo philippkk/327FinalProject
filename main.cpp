@@ -5,6 +5,9 @@
 #include <math.h>
 #include <vector>
 #include <cstdlib>
+
+#define MAPWIDTH 20
+#define MAPHEIGHT 12
 using namespace sf;
 
 class Bullet{
@@ -42,19 +45,61 @@ class Player{
             :currVelocity(0.0f,0.0f),maxSpd(8.f){
                 this->shape.setRadius(radius);
                 this->shape.setFillColor(Color::White);
-                this->drag = 0.75f;
-                this->spd = 1.f;
+                this->drag = 0.55f;
+                this->spd = 1.15f;
          }
 };
+class Tile{
+    public:
+        Texture texture;
+        Sprite sprite;
+        IntRect rect;
+        Clock clock;
+        Tile(Texture *t, IntRect r){
+            texture = *t;
+            rect = r;
+            Sprite s(*t,r);
+            sprite = s;
+            sprite.setScale(4,4);
+        }
+        Tile(){
 
+        }
+        void animate(int max,int size,float mili){
+            if(clock.getElapsedTime().asMilliseconds() > mili){
+                if(rect.left == max){
+                    rect.left = 0;
+                }else{
+                    rect.left += size;
+                }
+                sprite.setTextureRect(rect);
+                clock.restart();
+            }
+        }
 
+};
+Tile tiles[MAPWIDTH][MAPHEIGHT];
+int tileIndex[MAPWIDTH][MAPHEIGHT];
 bool isPlayerMoving = false;
+
+void handlePlayerMovement(Player *player);
 int main()
 {
     srand(time(NULL));
-    RenderWindow window(VideoMode(800, 600), "pew pew!");
+    RenderWindow window(VideoMode(1280, 720), "pew pew!");
     window.setFramerateLimit(60);
-    
+
+    //sprites
+    Texture texture;
+    texture.loadFromFile("fishing_full/Fish_Forage_Items/fish_shadow.png");
+    IntRect rectSourceSprite(0,0,16,16);
+    Sprite s(texture,rectSourceSprite);
+    Tile fish(&texture,rectSourceSprite);   
+    Texture mapTexture;
+    mapTexture.loadFromFile("327map.png");
+    Sprite mapSprite(mapTexture);
+    mapSprite.setScale(4,4);
+
     Player player(25.0f);
 
     Bullet b1(5);
@@ -71,8 +116,18 @@ int main()
     Vector2f aimDir;
     Vector2f aimDirNorm;
 
-
-    void handlePlayerMovement(Player *player);
+    for (int i = 0; i < MAPWIDTH; i++)
+    {
+        for (int j = 0; j < MAPHEIGHT; j++)
+        {
+            fish.rect.left = 0;
+            fish.sprite.setPosition(Vector2f(i*64,j*64));
+            int num = rand() % 10;
+            num *= 16;
+            fish.rect.left += num;
+            tiles[i][j] = Tile(fish);
+        }
+    }
     while (window.isOpen())
     {
         sf::Event event;
@@ -82,14 +137,19 @@ int main()
                 window.close();
         }
 
+
         //update
         playerCenter = Vector2f(player.shape.getPosition().x + player.shape.getRadius(),player.shape.getPosition().y + player.shape.getRadius());
         mousePosWindow = Vector2f(Mouse::getPosition(window));
         aimDir = mousePosWindow - playerCenter;
         aimDirNorm =  Vector2f(aimDir.x / sqrt(pow(aimDir.x,2) + pow(aimDir.y,2)),aimDir.y / sqrt(pow(aimDir.x,2) + pow(aimDir.y,2)));
-
-        handlePlayerMovement(&player);
+       
+       
+        if(window.hasFocus()){
+            handlePlayerMovement(&player);
+        }
         std::cout << player.shape.getPosition().x << " " << player.shape.getPosition().y << std::endl;
+        
         if(spawnCounter < 20){
             spawnCounter++;
         }
@@ -125,6 +185,24 @@ int main()
         }
 
         window.clear();
+        for (int i = 0; i < MAPWIDTH; i++)
+        {
+            for (int j = 0; j < MAPHEIGHT; j++)
+            {
+                tiles[i][j].animate(352, 16, 100);
+                window.draw(tiles[i][j].sprite);
+            }
+        }
+
+        for (int i = 0; i < MAPWIDTH; i++)
+        {
+            for (int j = 0; j < MAPHEIGHT; j++)
+            {
+                tiles[i][j].animate(352, 16, 100);
+                window.draw(tiles[i][j].sprite);
+            }
+        }
+        window.draw(mapSprite);
         for(size_t i = 0; i < enemies.size();i++){
             window.draw(enemies[i].shape);
         }
@@ -133,10 +211,9 @@ int main()
             window.draw(bullets[i].shape);
 
         }
-        
-        
 
-        
+
+
         window.display();
     }
 
@@ -196,19 +273,19 @@ void handlePlayerMovement(Player *player){
     }
 
         if(Keyboard::isKeyPressed(Keyboard::W)){
-            player->currVelocity.y -= 2.5;
+            player->currVelocity.y -= player->spd;
             isPlayerMoving = true;
         }
         if(Keyboard::isKeyPressed(Keyboard::A)){
-            player->currVelocity.x -= 2.5;
+            player->currVelocity.x -= player->spd;
             isPlayerMoving = true;
         }
         if(Keyboard::isKeyPressed(Keyboard::S)){
-            player->currVelocity.y += 2.5;
+            player->currVelocity.y += player->spd;
             isPlayerMoving = true;
         }
         if(Keyboard::isKeyPressed(Keyboard::D)){
-            player->currVelocity.x += 2.5;
+            player->currVelocity.x += player->spd;
             isPlayerMoving = true;
         }
 }
